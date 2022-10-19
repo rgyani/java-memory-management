@@ -103,20 +103,54 @@ Java 8: PermGen space which was part of Heap is removed in Java8 and is now call
 
 ##Java Garbage Collection Types
 There are five types of garbage collection types that we can use in our applications. We just need to use JVM switch to enable the garbage collection strategy for the application. Let’s look at each of them one by one.
-* **Serial GC** (-XX:+UseSerialGC): Serial GC uses the simple mark-sweep-compact approach for young and old generations garbage collection i.e Minor and Major GC.  
+### Serial GC (-XX:+UseSerialGC)
+Serial GC uses the simple mark-sweep-compact approach for young and old generations garbage collection i.e Minor and Major GC.  
 Serial GC is useful in client-machines such as our simple stand alone applications and machines with smaller CPU. It is good for small applications with low memory footprint.
-* **Parallel GC** (-XX:+UseParallelGC): Parallel GC is same as Serial GC except that is spawns N threads for young generation garbage collection where N is the number of CPU cores in the system. We can control the number of threads using -XX:ParallelGCThreads=n JVM option.  
+
+### Parallel GC (-XX:+UseParallelGC)
+Parallel GC is same as Serial GC except that is **spawns N threads for young generation** garbage collection where N is the number of CPU cores in the system. We can control the number of threads using -XX:ParallelGCThreads=n JVM option.  
 Parallel Garbage Collector is also called throughput collector because it uses multiple CPUs to speed up the GC performance. Parallel GC uses single thread for Old Generation garbage collection.
-* **Parallel Old GC** (-XX:+UseParallelOldGC): This is same as Parallel GC except that it uses multiple threads for both Young Generation and Old Generation garbage collection.
-* **Concurrent Mark Sweep (CMS) Collector** (-XX:+UseConcMarkSweepGC): CMS Collector is also referred as concurrent low pause collector. It also does the garbage collection for Old generation. CMS collector tries to minimize the pauses due to garbage collection by doing most of the garbage collection work concurrently with the application threads.  
+
+### Parallel Old GC (-XX:+UseParallelOldGC)
+This is same as Parallel GC except that it uses multiple threads for both Young Generation and Old Generation garbage collection.
+
+### Concurrent Mark Sweep (CMS) Collector (-XX:+UseConcMarkSweepGC)
+CMS Collector is also referred as concurrent low pause collector. It also does the garbage collection for Old generation. CMS collector tries to minimize the pauses due to garbage collection by doing most of the garbage collection work concurrently with the application threads.  
 CMS collector on young generation uses the same algorithm as that of the parallel collector. This garbage collector is suitable for responsive applications where we can’t afford longer pause times. We can limit the number of threads in CMS collector using -XX:ParallelCMSThreads=n JVM option.
-* **G1 Garbage Collector** (-XX:+UseG1GC): The Garbage First or G1 garbage collector is available from Java 7 and it’s long term goal is to replace the CMS collector. The G1 collector is a parallel, concurrent, and incrementally compacting low-pause garbage collector.  
-Garbage First Collector doesn’t work like other collectors and there is **no concept of Young and Old generation space**. It divides the heap space into multiple equal-sized heap regions. When a garbage collection is invoked, it first collects the region with lesser live data, hence “Garbage First”.
 
-### G1 Garbage Collector Heap Layout
-G1 partitions the heap into a set of equally sized heap regions, each a contiguous range of virtual memory as shown below.  
-A region is the unit of memory allocation and memory reclamation. At any given time, each of these regions can be empty (light gray), or assigned to a particular generation, young or old.  
-As requests for memory comes in, the memory manager hands out free regions. The memory manager assigns them to a generation and then returns them to the application as free space into which it can allocate itself.
+### G1 Garbage Collector (-XX:+UseG1GC)
+The Garbage First or G1 garbage collector is available from Java 7, and it’s long term goal is to replace the CMS collector. The G1 collector is a parallel, concurrent, and incrementally compacting low-pause garbage collector.  
 
-![](image5.png)
+**Unlike other collectors, the G1 collector partitions the heap into a set of equal-sized heap regions, each a contiguous range of virtual memory**.  
+When performing garbage collections, G1 shows a concurrent global marking phase (i.e. phase 1, known as Marking) to determine the liveness of objects throughout the heap.  
+After the mark phase is complete, G1 knows which regions are mostly empty. It collects in these areas first, which usually yields a significant amount of free space (i.e. phase 2, known as Sweeping). That's why this method of garbage collection is called Garbage-First.
 
+### Z Garbage Collector
+ZGC (Z Garbage Collector) is a scalable low-latency garbage collector that debuted in Java 11 as an experimental option for Linux.  
+JDK 14 introduced  ZGC under the Windows and macOS operating systems. **ZGC has obtained the production status from Java 15 onwards**.
+
+**ZGC performs all expensive work concurrently, without stopping the execution of application threads for more than 10 ms**, which makes it suitable for applications that require low latency. It uses load barriers with colored pointers to perform concurrent operations when the threads are running, and they're used to keep track of heap usage.
+
+Reference coloring (colored pointers) is the core concept of ZGC. It means that ZGC uses some bits (metadata bits) of reference to mark the state of the object. It also handles heaps ranging from 8MB to 16TB in size. Furthermore, pause times don't increase with the heap, live-set, or root-set size.
+
+Similar to G1, Z Garbage Collector partitions the heap, except that heap regions can have different sizes.
+
+### Shenandoah Collector
+Shenandoah (similar to ZGC) is the low pause time garbage collector that reduces GC pause times by performing more garbage collection work concurrently with the running Java program. Shenandoah does the bulk of GC work concurrently, including the concurrent compaction, which means its pause times are no longer directly proportional to the size of the heap. Garbage collecting a 200 GB heap or a 2 GB heap should have the similar low pause behavior.
+
+While ZGC uses colored pointers, Shenandoah uses forward pointers.
+
+The essential properties of the ZGC and Shenandoah collectors are as follows:
+* Pause times in the millisecond range, even with terabyte heaps
+* the pause time is independent of the size of the heap
+* Parallel and concurrent processing in all GC phases
+* region-based, no generations
+* Support for concurrent class unloading and uncommit memory
+
+#### Compare Shenandoah and ZGC
+ZGC(Oracle) and Shenandoah(Redhat) share the same core processes of marking, evacuation, and remapping supported by Mark and Load Barriers, respectively. Conceptually, the differences in working methods are small. The main technical differences are the following:
+
+* Shenandoah uses forward pointers, while ZGC stores forward information in an off-heap forward table.
+* ZGC uses colored pointers to store status information in the object references, which are efficiently checked by the barriers.
+
+Due to the colored pointers, ZGC is limited to 64-bit operating systems and does not support compressed oops. Shenandoah supports 64- and 32-bit platforms and Compressed Oops.
