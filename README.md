@@ -80,7 +80,7 @@ Parts of Perm Gen
 Java Stack memory is used for execution of a thread. They contain method specific values that are short-lived and references to other objects in the heap that are getting referred from the method
 
 
-#Java Garbage Collection
+# Java Garbage Collection
 Java Garbage Collection is the process to identify and remove the unused objects from the memory and free space to be allocated to objects created in the future processing. 
 
 One of the best feature of java programming language is the automatic garbage collection, unlike other programming languages such as C where memory allocation and deallocation is a manual process.
@@ -101,7 +101,7 @@ The above shortcomings with the simple approach is the reason that Java Garbage 
 Java 8: PermGen space which was part of Heap is removed in Java8 and is now called Metaspace.
 
 
-##Java Garbage Collection Types
+## Java Garbage Collection Types
 There are five types of garbage collection types that we can use in our applications. We just need to use JVM switch to enable the garbage collection strategy for the application. Let’s look at each of them one by one.
 ### Serial GC (-XX:+UseSerialGC)
 Serial GC uses the simple mark-sweep-compact approach for young and old generations garbage collection i.e Minor and Major GC.  
